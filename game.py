@@ -1,87 +1,120 @@
 import pygame
-import sys
+import random
 
 pygame.init()
 
-WIDTH, HEIGHT = 800, 600
+WIDTH, HEIGHT = 500, 400
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Пинг-понг")
 
-BLUE = (135, 206, 235)  
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
+RED = (255, 0, 0)
 
-PADDLE_WIDTH, PADDLE_HEIGHT = 15, 100
-paddle_speed = 5
-
-
-left_paddle = pygame.Rect(50, HEIGHT // 2 - PADDLE_HEIGHT // 2, PADDLE_WIDTH, PADDLE_HEIGHT)
-right_paddle = pygame.Rect(WIDTH - 50 - PADDLE_WIDTH, HEIGHT // 2 - PADDLE_HEIGHT // 2, PADDLE_WIDTH, PADDLE_HEIGHT)
-
-ball_size = 15
-ball_speed_x, ball_speed_y = 5, 5
-ball = pygame.Rect(WIDTH // 2 - ball_size // 2, HEIGHT // 2 - ball_size // 2, ball_size, ball_size)
-
-left_score = 0
-right_score = 0
-font = pygame.font.Font(None, 74)
-
-
+FPS = 60
 clock = pygame.time.Clock()
 
 
-while True:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
+class Paddle:
+    def __init__(self, x, y, width, height):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.speed = 7
 
-    
-    keys = pygame.key.get_pressed()
-    if keys[pygame.K_w] and left_paddle.top > 0:
-        left_paddle.y -= paddle_speed
-    if keys[pygame.K_s] and left_paddle.bottom < HEIGHT:
-        left_paddle.y += paddle_speed
-    if keys[pygame.K_UP] and right_paddle.top > 0:
-        right_paddle.y -= paddle_speed
-    if keys[pygame.K_DOWN] and right_paddle.bottom < HEIGHT:
-        right_paddle.y += paddle_speed
+    def move_up(self):
+        if self.rect.top > 0:
+            self.rect.y -= self.speed
+
+    def move_down(self):
+        if self.rect.bottom < HEIGHT:
+            self.rect.y += self.speed
+
+    def draw(self, screen):
+        pygame.draw.rect(screen, BLACK, self.rect)
+
+class Ball:
+    def __init__(self, size):
+        self.size = size
+        self.rect = pygame.Rect(WIDTH // 2 - size // 2,
+                               HEIGHT // 2 - size // 2, size, size)
+        self.dx = random.choice([-3, 3])
+        self.dy = random.choice([-3, 3])
+
+    def move(self):
+        self.rect.x += self.dx
+        self.rect.y += self.dy
+
+        if self.rect.top <= 0 or self.rect.bottom >= HEIGHT:
+            self.dy *= -1
+
+    def reset(self):
+        self.rect.center = (WIDTH // 2, HEIGHT // 2)
+        self.dx = random.choice([-3, 3])
+        self.dy = random.choice([-3, 3])
+
+    def draw(self, screen):
+        pygame.draw.rect(screen, RED, self.rect)
+
+class Game:
+    def __init__(self):
+        self.paddle_left = Paddle(20, HEIGHT // 2 - 25, 10, 50)
+        self.paddle_right = Paddle(WIDTH - 30, HEIGHT // 2 - 25, 10, 50)
+        self.ball = Ball(15)
+        self.score_left = 0
+        self.score_right = 0
+        self.font = pygame.font.Font(None, 36)
+
+    def handle_input(self):
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_w]:
+            self.paddle_left.move_up()
+        if keys[pygame.K_s]:
+            self.paddle_left.move_down()
+        if keys[pygame.K_UP]:
+            self.paddle_right.move_up()
+        if keys[pygame.K_DOWN]:
+            self.paddle_right.move_down()
+
+    def update(self):
+        self.ball.move()
+        if self.ball.rect.colliderect(self.paddle_left.rect) or \
+           self.ball.rect.colliderect(self.paddle_right.rect):
+            self.ball.dx *= -1
+
+        if self.ball.rect.left <= 0:
+            self.score_right += 1
+            self.ball.reset()
+        elif self.ball.rect.right >= WIDTH:
+            self.score_left += 1
+            self.ball.reset()
+
+    def draw(self, screen):
+        screen.fill(WHITE)
+        self.paddle_left.draw(screen)
+        self.paddle_right.draw(screen)
+        self.ball.draw(screen)
+        score_text = self.font.render(f"{self.score_left} - {self.score_right}", True, BLACK)
+        screen.blit(score_text, (WIDTH // 2 - score_text.get_width() // 2, 10))
+
+    def run(self):
+        running = True
+        while running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+
+            self.handle_input()
+            self.update()
+            self.draw(screen)
+
+            pygame.display.flip()
+            clock.tick(FPS)
+
+if __name__ == "__main__":
+    game = Game()
+    game.run()
+    pygame.quit()
+    sys.exit()
 
 
-    ball.x += ball_speed_x
-    ball.y += ball_speed_y
 
-    
-    if ball.top <= 0 or ball.bottom >= HEIGHT:
-        ball_speed_y *= -1
 
-    
-    if ball.colliderect(left_paddle) or ball.colliderect(right_paddle):
-        ball_speed_x *= -1
-
-    
-    if ball.left <= 0:
-        right_score += 1
-        ball.center = (WIDTH // 2, HEIGHT // 2)
-        ball_speed_x *= -1
-    elif ball.right >= WIDTH:
-        left_score += 1
-        ball.center = (WIDTH // 2, HEIGHT // 2)
-        ball_speed_x *= -1
-
-    
-    screen.fill(BLACK)
-    pygame.draw.rect(screen, WHITE, left_paddle)
-    pygame.draw.rect(screen, WHITE, right_paddle)
-    pygame.draw.ellipse(screen, WHITE, ball)
-    pygame.draw.aaline(screen, WHITE, (WIDTH // 2, 0), (WIDTH // 2, HEIGHT))  
-
-    
-    left_text = font.render(str(left_score), True, WHITE)
-    right_text = font.render(str(right_score), True, WHITE)
-    screen.blit(left_text, (WIDTH // 4, 20))
-    screen.blit(right_text, (WIDTH * 3 // 4, 20))
-
-    
-    pygame.display.flip()
-    clock.tick(60)  
