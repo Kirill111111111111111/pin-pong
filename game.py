@@ -14,7 +14,6 @@ RED = (255, 0, 0)
 FPS = 60
 clock = pygame.time.Clock()
 
-
 class Paddle:
     def __init__(self, x, y, width, height):
         self.rect = pygame.Rect(x, y, width, height)
@@ -76,10 +75,13 @@ class Game:
 
     def update(self):
         self.ball.move()
-        if self.ball.rect.colliderect(self.paddle_left.rect) or \
-           self.ball.rect.colliderect(self.paddle_right.rect):
-            self.ball.dx *= -1
 
+        
+        if (self.ball.rect.colliderect(self.paddle_left.rect) and self.ball.dx < 0) or \
+           (self.ball.rect.colliderect(self.paddle_right.rect) and self.ball.dx > 0):
+            self.ball.dx *= -1.1
+
+        
         if self.ball.rect.left <= 0:
             self.score_right += 1
             self.ball.reset()
@@ -101,20 +103,18 @@ class Game:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        running = False
 
             self.handle_input()
             self.update()
             self.draw(screen)
-
-            pygame.display.flip()
-            clock.tick(FPS)
-
-if __name__ == "__main__":
-    game = Game()
-    game.run()
-    pygame.quit()
-    sys.exit()
+            pygame.display.flip()  
+            clock.tick(FPS) 
 
 
-
+game = Game()
+game.run()
+pygame.quit()
 
